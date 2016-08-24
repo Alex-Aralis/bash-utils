@@ -1,0 +1,14 @@
+#!/bin/bash
+
+prefix="$1"
+task="$2"
+
+todo="$prefix/todo"
+newTodo="$prefix/.todo.new"
+
+touch "$todo"
+
+echo "$task" > "$newTodo"
+cat "$todo" >> "$newTodo"
+
+mv "$newTodo" "$todo"
