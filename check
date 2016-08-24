@@ -1,0 +1,16 @@
+#!/bin/bash
+
+class=$1
+
+line=$(head -n 1 "$class/todo")
+
+if [ -n "$line" ] 
+then 
+  echo "✓ $line"
+  echo "$line" >> "$class/completed"
+else
+  echo "Nothing todo."
+fi
+
+tail -n +2 "$class/todo" > "$class/todo.new"
+mv -f "$class/todo.new" "$class/todo"

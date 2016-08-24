@@ -1,0 +1,3 @@
+#!/bin/sh
+import -window root -quality 98 $HOME/screencaps/full$(date +%F_%H%M%S_%N).png
+
