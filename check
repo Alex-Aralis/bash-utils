@@ -1,16 +1,33 @@
 #!/bin/bash
 
 class=$1
+state="empty"
 
-line=$(head -n 1 "$class/todo")
+: > "$class/todo.new"
 
-if [ -n "$line" ] 
-then 
-  echo "✓ $line"
-  echo "$line" >> "$class/completed"
+while read -r line; do
+  if [[ "$state" == "empty" ]]; then
+    state="complete"
+  fi
+
+  if [[ "$state" == "complete" ]]; then
+    if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+      echo "$line" >> "$class/complete"
+    else
+      state="todo"
+      echo "$line" | tee -a "$class/complete" | xargs -0 printf '✓ %s' 
+    fi
+  else
+    echo "$line" >> "$class/todo.new"
+  fi
+done < "$class/todo"
+
+if [[ "$state" == "empty" ]]; then
+  echo "Nothing to complete."
+  rm "$class/todo.new"
+elif [[ "$state" == "complete" ]]; then
+  echo "Nothing to complete."
+  mv -f "$class/todo.new" "$class/todo"
 else
-  echo "Nothing todo."
+  mv -f "$class/todo.new" "$class/todo"
 fi
-
-tail -n +2 "$class/todo" > "$class/todo.new"
-mv -f "$class/todo.new" "$class/todo"
