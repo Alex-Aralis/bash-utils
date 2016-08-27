@@ -11,7 +11,7 @@ for thing in ${things[*]}; do
     printf "\n---+%s\n" "$thing"
 
     while read -r line; do
-        if [ $count -lt 10 ]
+        if [ $count -lt 6 ]
         then
             echo "   | $line"
             (( count += 1 ))
