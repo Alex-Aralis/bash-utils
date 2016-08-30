@@ -1,33 +1,67 @@
 #!/bin/bash
 
-prefix=$1
+prefix="$PWD/$1"
+loops="${2-1}"
 newTodo="$prefix/.todo.new"
 comp="$prefix/.complete"
 todo="$prefix/todo"
 
-state="empty"
+if ! [ -d "$prefix" ]; then
+  echo ERROR: "$prefix" is not a directory! 1>&2
+  exit 1
+fi
+
+if [ -f "$newTodo" ]; then 
+  echo ERROR: "$newTodo" should not exist. 1>&2 
+  echo A previous transaction probably failed. 1>&2
+  echo Clean up "$newTodo" 'then' run "$0" again. 1>&2
+  exit 1
+fi
+
+if ! [ -f "$todo" ]; then
+  echo ERROR: "$todo" does not exist! 1>&2 
+  exit 1
+fi
+
+if ! [[ "$loops" =~ ^[0-9]+$ ]]; then
+  echo ERROR: Number of loops must be an integer. 1>&2
+  exit 1
+fi
 
 : > "$newTodo"
 
-while read -r line; do
-  if [[ "$state" == "empty" ]]; then
-    state="complete"
-  fi
 
-  if [[ "$state" == "complete" ]]; then
-    if [[ "$line" =~ ^[[:space:]]*$ ]]; then
-      echo "$line" >> "$comp"
-    else
-      state="todo"
-      echo "$line" | tee -a "$comp" | xargs -0 printf '✓ %s' 
+
+check () {
+  state="empty"
+
+  while read -r line; do
+    if [[ "$state" == "empty" ]]; then
+      state="complete"
     fi
-  else
-    echo "$line" >> "$newTodo"
+
+    if [[ "$state" == "complete" ]]; then
+      if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+        echo "$line" >> "$comp"
+      else
+        state="todo"
+        echo "$line" | tee -a "$comp" | xargs -0 printf '✓ %s' 
+      fi
+    else
+      echo "$line" >> "$newTodo"
+    fi
+  done < "$todo"
+
+  mv -f "$newTodo" "$todo"
+
+  if [[ "$state" != "todo" ]]; then
+    echo "Nothing to complete." 1>&2
+    exit 1
   fi
-done < "$todo"
+}
 
-if [[ "$state" != "todo" ]]; then
-  echo "Nothing to complete."
-fi
+for idx in $(seq 1 "$loops"); do
+  echo -n "$idx: "
+  check
+done
 
-mv -f "$newTodo" "$todo"
