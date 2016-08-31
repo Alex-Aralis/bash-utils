@@ -1,7 +1,7 @@
 #!/bin/bash
 
 prefix="$PWD/$1"
-loops="${2-1}"
+lines="${2-1}"
 newTodo="$prefix/.todo.new"
 comp="$prefix/.complete"
 todo="$prefix/todo"
@@ -26,7 +26,7 @@ if ! [ -f "$todo" ]; then
   exit 1
 fi
 
-if ! [[ "$loops" =~ ^[0-9]+$ ]]; then
+if ! [[ "$lines" =~ ^[0-9]+$ ]]; then
   echo ERROR: Number of loops must be an integer. 1>&2
   exit 1
 fi
@@ -38,52 +38,51 @@ fi
 
 : > "$newTodo"
 
-check () {
-  state="empty"
-  phase=0
+state="empty"
+phase=0
 
-  while read -r line; do
-    if [[ "$state" == "empty" ]]; then
-      state="trim"
-    fi
-
-    if [[ "$state" == "trim" ]]; then 
-      if ! [[ "$line" =~ ^[[:space:]]*$ ]]; then
-        phase=$((phase+1))
-      fi
-    fi
-
-    case $phase in
-    0)
-      echo "$line" >> "$comp"
-      ;;
-    1) 
-      echo "$line" | tee -a "$comp" | xargs -0 printf '✓ %s' 
-      phase=$((phase+1))
-      ;;
-    2) 
-      echo "$line" >> "$comp"
-      ;;
-    3)
-      state="todo"
-      ;;
-    esac
-
-    if [[ "$state" == "todo" ]]; then
-      echo "$line" >> "$newTodo"
-    fi
-  done < "$todo"
-
-  mv -f "$newTodo" "$todo"
-
-  if [[ "$phase" =~ [01] ]]; then
-    echo "Nothing to complete." 1>&2
-    exit 1
+while read -r line; do
+  if [[ "$state" == "empty" ]]; then
+    state="trim"
   fi
-}
 
-for idx in $(seq 1 "$loops"); do
-  echo -n "$idx: "
-  check
-done
+  if [[ "$state" == "trim" ]]; then 
+    if ! [[ "$line" =~ ^[[:space:]]*$ ]]; then
+      phase=$((phase + 1))
+    fi
+  fi
+
+  case $phase in
+  0)
+    echo "$line" >> "$comp"
+    ;;
+  1) 
+    echo "$line" | tee -a "$comp" | xargs -0 printf '✓ %s' 
+
+    lines=$((lines - 1))
+    if [[ "$lines" == 0 ]]; then
+      phase=2
+    else
+      phase=0
+    fi
+    ;;
+  2) 
+    echo "$line" >> "$comp"
+    ;;
+  3)
+    state="todo"
+    ;;
+  esac
+
+  if [[ "$state" == "todo" ]]; then
+    echo "$line" >> "$newTodo"
+  fi
+done < "$todo"
+
+mv -f "$newTodo" "$todo"
+
+if [[ "$phase" =~ [01] ]]; then
+  echo "Nothing to complete." 1>&2
+  exit 1
+fi
 
