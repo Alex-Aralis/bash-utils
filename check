@@ -2,15 +2,23 @@
 
 prefix="$PWD/$1"
 lines="${2-1}"
-newTodo="$prefix/.todo.new"
 comp="$prefix/.complete"
 todo="$prefix/todo"
+newTodo="$todo.new"
+newComp="$comp.new"
 
 ################################################################################
 # INPUT VALIDATION
 ################################################################################
 if ! [ -d "$prefix" ]; then
   echo ERROR: "$prefix" is not a directory! 1>&2
+  exit 1
+fi
+
+if [ -f "$newComp" ]; then 
+  echo ERROR: "$newComp" should not exist. 1>&2 
+  echo A previous transaction probably failed. 1>&2
+  echo Clean up "$newComp" 'then' run "$0" again. 1>&2
   exit 1
 fi
 
@@ -31,33 +39,44 @@ if ! [[ "$lines" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-
 ################################################################################
-# PROCESSING
+# FILE SETUP
 ################################################################################
 
+: > "$newComp"
 : > "$newTodo"
 
-state="empty"
+touch "$comp"
+
+################################################################################
+# FUNCTIONS
+################################################################################
+
 phase=0
+line=''
+trim () {
+  if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+    echo "$line" >> "$newComp"
+  else
+    phase=$((phase + 1))
+  fi
+  echo $phase $line
+}
+
+################################################################################
+# MAIN LOOP
+################################################################################
 
 while read -r line; do
-  if [[ "$state" == "empty" ]]; then
-    state="trim"
+  echo loops complete, $phase $line
+  if [[ $phase == 0 ]]; then
+    echo $phase: $line
+    trim
   fi
 
-  if [[ "$state" == "trim" ]]; then 
-    if ! [[ "$line" =~ ^[[:space:]]*$ ]]; then
-      phase=$((phase + 1))
-    fi
-  fi
-
-  case $phase in
-  0)
-    echo "$line" >> "$comp"
-    ;;
-  1) 
-    echo "$line" | tee -a "$comp" | xargs -0 printf '✓ %s' 
+  if [[ $phase == 1 ]]; then
+    echo $phase: $line
+    echo "$line" | tee -a "$newComp" | xargs -0 printf '✓ %s' 
 
     lines=$((lines - 1))
     if [[ "$lines" == 0 ]]; then
@@ -65,21 +84,40 @@ while read -r line; do
     else
       phase=0
     fi
-    ;;
-  2) 
-    echo "$line" >> "$comp"
-    ;;
-  3)
-    state="todo"
-    ;;
-  esac
+  fi
 
-  if [[ "$state" == "todo" ]]; then
+  if [[ $phase == 2 ]]; then
+    echo $phase: $line
+    trim
+    continue
+  fi
+
+  if [[ $phase == 3 ]]; then
+    echo $phase: $line
     echo "$line" >> "$newTodo"
   fi
 done < "$todo"
 
-mv -f "$newTodo" "$todo"
+################################################################################
+# FILE TEARDOWN
+################################################################################
+
+cat "$comp" >> "$newComp"
+
+echo new todo
+cat "$newTodo"
+echo 
+
+echo new .complete
+cat "$newComp"
+echo 
+
+mv "$newComp" "$comp"
+mv "$newTodo" "$todo"
+
+################################################################################
+# WARNINGS 
+################################################################################
 
 if [[ "$phase" =~ [01] ]]; then
   echo "Nothing to complete." 1>&2
