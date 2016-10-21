@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cols=$(tput cols)
+
 if [ "$#" -eq 0 ]; then 
     things=( $(echo ./*/) ) 
 else
@@ -9,8 +11,7 @@ fi
 for thing in ${things[*]}; do
     count=0
     printf "\n---+%s\n" "$thing"
-
-    while read -r line; do
+    fold -s -w $((cols - 5)) "$thing/todo" | while read -r line; do
         if [ $count -lt 6 ]
         then
             echo "   | $line"
@@ -19,8 +20,9 @@ for thing in ${things[*]}; do
             echo "   | ..."
             break
         fi
-    done < "$thing/todo"
-done 2> /dev/null
+    # done < "$thing/todo"
+    done
+  done 2> /dev/null
 
 echo
 
