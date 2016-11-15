@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if ping -W1 -qc1 8.8.4.4 > /dev/null 
+then 
+  echo Κ
+else
+  echo ¦
+  exit 1
+fi
