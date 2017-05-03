@@ -1,0 +1,7 @@
+#!/bin/bash
+
+xelatex -halt-on-error "$1" && \
+biber "$1" && \
+xelatex -halt-on-error "$1" && \
+xelatex -halt-on-error "$1" && \
+chromium "$1".pdf

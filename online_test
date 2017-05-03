@@ -2,7 +2,7 @@
 
 if [[ $(iw wlp3s0 link) != "Not connected." ]]
 then
-  ifconfig wlp3s0 | grep 'inet ' | tr -s '[:space:]' | cut -d' ' -f3
+  ifconfig wlp3s0 | grep 'inet ' | tr -s '[:space:]' | cut -d' ' -f3 
 
   if ping -W1 -qc1 8.8.4.4 > /dev/null 
   then 
